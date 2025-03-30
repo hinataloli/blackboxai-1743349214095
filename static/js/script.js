@@ -1,8 +1,12 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Load saved chat from cookie
     const savedChat = loadChatFromCookie();
-    if (savedChat.length > 0) {
-        savedChat.forEach(msg => addMessage(msg.type, msg.content));
+    if (savedChat && savedChat.length > 0) {
+        savedChat.forEach(msg => {
+            if (msg.type && msg.content) {
+                addMessage(msg.type, msg.content);
+            }
+        });
     }
     
     // New chat button handler
@@ -495,7 +499,12 @@ document.addEventListener('DOMContentLoaded', function() {
 document.getElementById('chat-textarea').addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        document.getElementById('chat-form').dispatchEvent(new Event('submit'));
+        const form = document.getElementById('chat-form');
+        if (form && !form.hasAttribute('data-submitting')) {
+            form.setAttribute('data-submitting', 'true');
+            form.dispatchEvent(new Event('submit'));
+            setTimeout(() => form.removeAttribute('data-submitting'), 100);
+        }
     }
 });
 
@@ -514,8 +523,16 @@ function createNewChat() {
 
 // Save chat to cookie
 function saveChatToCookie(messages) {
-    const chatHistory = JSON.stringify(messages);
-    document.cookie = `chatHistory=${encodeURIComponent(chatHistory)};path=/;max-age=604800`; // 7 days
+    try {
+        const chatHistory = JSON.stringify(messages);
+        const date = new Date();
+        date.setTime(date.getTime() + (7 * 24 * 60 * 60 * 1000)); // 7 days
+        document.cookie = `chatHistory=${encodeURIComponent(chatHistory)};path=/;expires=${date.toUTCString()}`;
+        return true;
+    } catch (error) {
+        console.error('Error saving chat:', error);
+        return false;
+    }
 }
 
 // Load chat from cookie
