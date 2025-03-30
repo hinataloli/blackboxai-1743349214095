@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thống Kê Bình Luận TikTok</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1.2.5/build/d3.layout.cloud.js"></script>
+</head>
+<body class="light-mode">
+    <header>
+        <nav class="main-nav">
+            <div class="logo">
+                <i class="fab fa-tiktok"></i>
+                <span>TikTok Analyzer</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Trang Chủ</a></li>
+                <li><a href="{{ url_for('statistics_page') }}" class="active"><i class="fas fa-chart-pie"></i> Thống Kê</a></li>
+                <li>
+                    <button id="theme-toggle" class="theme-toggle">
+                        <i class="fas fa-sun"></i>
+                        <i class="fas fa-moon"></i>
+                        <span class="toggle-track"></span>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="statistics" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Thống Kê Bình Luận</h2>
+                    <a href="{{ url_for('index') }}" class="back-btn"><i class="fas fa-arrow-left"></i> Quay Lại</a>
+                </div>
+
+                {% if results and results|length > 0 %}
+                    <div class="stats-summary">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-comments"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>Tổng Bình Luận</h3>
+                                <p class="stat-number">{{ stats.total_comments }}</p>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon positive">
+                                <i class="fas fa-smile"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>Tích Cực</h3>
+                                <p class="stat-number">{{ stats.sentiment_distribution.get('Tích cực', 0) }}</p>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon negative">
+                                <i class="fas fa-frown"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>Tiêu Cực</h3>
+                                <p class="stat-number">{{ stats.sentiment_distribution.get('Tiêu cực', 0) }}</p>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon neutral">
+                                <i class="fas fa-meh"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3>Trung Lập</h3>
+                                <p class="stat-number">{{ stats.sentiment_distribution.get('Trung lập', 0) }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="charts-container">
+                        <!-- Row 1: Main Charts -->
+                        <div class="chart-row">
+                            <div class="chart-card">
+                                <h3>Phân Bố Cảm Xúc</h3>
+                                <div class="chart-container">
+                                    <canvas id="sentimentPieChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <h3>Người Bình Luận Nhiều Nhất</h3>
+                                <div class="chart-container">
+                                    <canvas id="commentersBarChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Word Cloud and Highlights -->
+                        <div class="chart-row">
+                            <div class="chart-card">
+                                <h3>Các Từ Phổ Biến</h3>
+                                <div class="chart-container word-cloud-container">
+                                    <div id="wordCloud"></div>
+                                </div>
+                            </div>
+                            <div class="chart-card highlight-card">
+                                <h3>Nổi Bật</h3>
+                                <div class="highlights-container">
+                                    {% if stats.most_positive_comment %}
+                                        <div class="highlight positive">
+                                            <h4><i class="fas fa-thumbs-up"></i> Bình Luận Tích Cực Nhất</h4>
+                                            <p class="highlight-text">{{ stats.most_positive_comment.text }}</p>
+                                            <p class="highlight-author">- {{ stats.most_positive_comment.nickname }}</p>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if stats.most_negative_comment %}
+                                        <div class="highlight negative">
+                                            <h4><i class="fas fa-thumbs-down"></i> Bình Luận Tiêu Cực Nhất</h4>
+                                            <p class="highlight-text">{{ stats.most_negative_comment.text }}</p>
+                                            <p class="highlight-author">- {{ stats.most_negative_comment.nickname }}</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Export Options -->
+                    <div class="export-options">
+                        <h3>Xuất Thống Kê</h3>
+                        <div class="export-buttons">
+                            <button id="export-stats-csv" class="export-btn"><i class="fas fa-file-csv"></i> CSV</button>
+                            <button id="export-stats-json" class="export-btn"><i class="fas fa-file-code"></i> JSON</button>
+                            <button id="export-stats-pdf" class="export-btn"><i class="fas fa-file-pdf"></i> PDF</button>
+                            <button id="export-stats-image" class="export-btn"><i class="fas fa-image"></i> Hình Ảnh</button>
+                        </div>
+                    </div>
+
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-chart-bar"></i>
+                        <p>Chưa có dữ liệu thống kê. Hãy phân tích một số bình luận trước!</p>
+                        <a href="{{ url_for('index') }}" class="btn-primary">Phân Tích Bình Luận</a>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 TikTok Comment Analyzer. Tất cả các quyền được bảo lưu.</p>
+    </footer>
+
+    <div id="notification" class="notification">
+        <i class="fas fa-info-circle"></i>
+        <span id="notification-message">Thông báo</span>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/statistics.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/export.js') }}"></script>
+</body>
+</html>

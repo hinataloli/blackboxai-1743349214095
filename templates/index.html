@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok Comment Analyzer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="light-mode">
+    <header>
+        <nav class="main-nav">
+            <div class="logo">
+                <i class="fab fa-tiktok"></i>
+                <span>TikTok Analyzer</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('index') }}" class="active"><i class="fas fa-home"></i> Trang Chủ</a></li>
+                <li><a href="{{ url_for('statistics_page') }}"><i class="fas fa-chart-pie"></i> Thống Kê</a></li>
+                <li>
+                    <button id="theme-toggle" class="theme-toggle">
+                        <i class="fas fa-sun"></i>
+                        <i class="fas fa-moon"></i>
+                        <span class="toggle-track"></span>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Landing Section -->
+        <section id="landing" class="section">
+            <div class="container">
+                <h1>Phân Tích Bình Luận TikTok</h1>
+                <p>Phân tích cảm xúc, tìm hiểu xu hướng và hiểu rõ người theo dõi của bạn với công cụ phân tích bình luận TikTok thông minh.</p>
+                <div class="action-buttons">
+                    <button id="analyze-btn" class="action-btn"><i class="fas fa-chart-bar"></i> Phân Tích Bình Luận</button>
+                    <button id="chat-btn" class="action-btn"><i class="fas fa-comment-dots"></i> Trò Chuyện với AI</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Analyzer Section -->
+        <section id="analyzer" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Phân Tích Bình Luận</h2>
+                    <button id="back-to-landing-from-analyzer" class="back-btn"><i class="fas fa-arrow-left"></i> Quay Lại</button>
+                </div>
+
+                <div class="card">
+                    <div class="form-container">
+                        <form id="analyzer-form">
+                            <div class="input-group">
+                                <input type="text" name="video_id" placeholder="Nhập ID video TikTok (hoặc nhiều ID, cách nhau bằng dấu phẩy)" required>
+                            </div>
+                            
+                            <div class="options-container">
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="moderate-content" name="moderate-content">
+                                    <label for="moderate-content">Kiểm duyệt nội dung</label>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="submit-btn"><i class="fas fa-search"></i> Phân Tích</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card result-card">
+                    <div class="card-header">
+                        <h3>Kết Quả Phân Tích</h3>
+                        <div class="action-group">
+                            <div class="dropdown">
+                                <button class="dropdown-btn"><i class="fas fa-filter"></i> Lọc <i class="fas fa-chevron-down"></i></button>
+                                <div class="dropdown-content">
+                                    <a href="#" data-filter="all">Tất cả</a>
+                                    <a href="#" data-filter="positive">Tích cực</a>
+                                    <a href="#" data-filter="negative">Tiêu cực</a>
+                                    <a href="#" data-filter="neutral">Trung lập</a>
+                                    <a href="#" data-filter="flagged">Bị gắn cờ</a>
+                                    <a href="#" data-filter="most_likes">Nhiều lượt thích nhất</a>
+                                    <a href="#" data-filter="newest">Mới nhất</a>
+                                    <a href="#" data-filter="oldest">Cũ nhất</a>
+                                </div>
+                            </div>
+                            <div class="dropdown">
+                                <button class="dropdown-btn"><i class="fas fa-download"></i> Xuất <i class="fas fa-chevron-down"></i></button>
+                                <div class="dropdown-content">
+                                    <a href="#" data-export="csv">Xuất CSV</a>
+                                    <a href="#" data-export="json">Xuất JSON</a>
+                                    <a href="#" data-export="pdf">Xuất PDF</a>
+                                </div>
+                            </div>
+                            <button id="view-stats-btn" class="action-btn"><i class="fas fa-chart-pie"></i> Xem Thống Kê</button>
+                            <button id="clear-results-btn" class="action-btn"><i class="fas fa-trash"></i> Xóa Kết Quả</button>
+                        </div>
+                    </div>
+                    <div id="results" class="results-container">
+                        {% if results %}
+                            {% for result in results %}
+                                <div class="comment-card {% if result.flagged %}flagged{% endif %}">
+                                    <div class="comment-header">
+                                        <div class="user-info">
+                                            <img src="{{ result.avatar if result.avatar else 'https://via.placeholder.com/40' }}" alt="Avatar" class="avatar">
+                                            <span class="nickname">{{ result.nickname }} (@{{ result.unique_id }})</span>
+                                        </div>
+                                        <div class="likes-info">
+                                            <i class="fas fa-heart"></i> {{ result.likes }}
+                                        </div>
+                                    </div>
+                                    <div class="comment-text">{{ result.text }}</div>
+                                    <div class="comment-footer">
+                                        <span class="emotion {{ result.emotion.lower().replace(' ', '_') }}">
+                                            {% if result.emotion == 'Tích cực' %}
+                                                <i class="fas fa-smile"></i>
+                                            {% elif result.emotion == 'Tiêu cực' %}
+                                                <i class="fas fa-frown"></i>
+                                            {% else %}
+                                                <i class="fas fa-meh"></i>
+                                            {% endif %}
+                                            Cảm xúc: {{ result.emotion }}
+                                        </span>
+                                        <span class="conclusion">Kết luận: {{ result.conclusion }}</span>
+                                        {% if result.flagged %}
+                                            <span class="flag-reason">
+                                                <i class="fas fa-exclamation-triangle"></i> 
+                                                {{ result.flag_reason }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="fas fa-comment-slash"></i>
+                                <p>Chưa có bình luận nào được phân tích</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chat Section -->
+        <section id="chat" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Trò Chuyện với AI</h2>
+                    <button id="back-to-landing-from-chat" class="back-btn"><i class="fas fa-arrow-left"></i> Quay Lại</button>
+                </div>
+
+                <div class="chat-container">
+                    <div class="chat-panel">
+                        <div class="chat-header">
+                            <h3><i class="fas fa-robot"></i> AI Assistant</h3>
+                            <div class="chat-actions">
+                                <button id="save-chat-btn" class="small-btn" title="Lưu cuộc trò chuyện"><i class="fas fa-save"></i></button>
+                                <button id="clear-chat-btn" class="small-btn" title="Xóa cuộc trò chuyện"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div id="chat-output-panel" class="chat-output-panel">
+                            <div class="message ai-message">
+                                <div class="message-avatar ai-avatar"><i class="fas fa-robot"></i></div>
+                                <div class="message-content">
+                                    <p>Xin chào! Tôi là trợ lý AI. Tôi có thể giúp gì cho bạn hôm nay?</p>
+                                </div>
+                            </div>
+                            
+                            {% if chat_history %}
+                                {% for entry in chat_history %}
+                                    <div class="message user-message">
+                                        <div class="message-avatar user-avatar"><i class="fas fa-user"></i></div>
+                                        <div class="message-content">{{ entry.query }}</div>
+                                    </div>
+                                    <div class="message ai-message">
+                                        <div class="message-avatar ai-avatar"><i class="fas fa-robot"></i></div>
+                                        <div class="message-content">{{ entry.response|safe }}</div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <div class="chat-input">
+                            <form id="chat-form">
+                                <textarea name="ai_query" id="chat-textarea" class="chat-textarea" placeholder="Nhập câu hỏi của bạn..." required></textarea>
+                                <button type="submit" class="chat-submit-btn"><i class="fas fa-paper-plane"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="saved-chats-panel">
+                        <div class="saved-chats-header">
+                            <h3>Cuộc trò chuyện đã lưu</h3>
+                        </div>
+                        <div class="saved-chats-list" id="saved-chats-list">
+                            {% if chat_history %}
+                                {% for entry in chat_history %}
+                                    <div class="saved-chat-item" data-id="{{ entry.id }}">
+                                        <div class="saved-chat-preview">
+                                            <p class="saved-chat-query">{{ entry.query[:30] + '...' if entry.query|length > 30 else entry.query }}</p>
+                                            <span class="saved-chat-time">{{ entry.timestamp }}</span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <i class="fas fa-comment-slash"></i>
+                                    <p>Chưa có cuộc trò chuyện nào được lưu</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 TikTok Comment Analyzer. Tất cả các quyền được bảo lưu.</p>
+    </footer>
+
+    <div id="notification" class="notification">
+        <i class="fas fa-info-circle"></i>
+        <span id="notification-message">Thông báo</span>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/darkmode.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/export.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/moderation.js') }}"></script>
+</body>
+</html>
