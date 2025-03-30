@@ -1,4 +1,12 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Load saved chat from cookie
+    const savedChat = loadChatFromCookie();
+    if (savedChat.length > 0) {
+        savedChat.forEach(msg => addMessage(msg.type, msg.content));
+    }
+    
+    // New chat button handler
+    document.getElementById('new-chat-btn').addEventListener('click', createNewChat);
     // Elements
     const landingSection = document.getElementById('landing');
     const analyzerSection = document.getElementById('analyzer');
@@ -483,7 +491,44 @@ document.addEventListener('DOMContentLoaded', function() {
         return text;
     }
     
-    function addMessage(type, content) {
+    // Handle keyboard shortcuts 
+document.getElementById('chat-textarea').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('chat-form').dispatchEvent(new Event('submit'));
+    }
+});
+
+// Create new chat
+function createNewChat() {
+    chatOutputPanel.innerHTML = `
+        <div class="message ai-message">
+            <div class="message-avatar ai-avatar"><i class="fas fa-robot"></i></div>
+            <div class="message-content">
+                <p>Xin chào! Tôi là trợ lý AI. Tôi có thể giúp gì cho bạn hôm nay?</p>
+            </div>
+        </div>
+    `;
+    saveChatToCookie([]); 
+}
+
+// Save chat to cookie
+function saveChatToCookie(messages) {
+    const chatHistory = JSON.stringify(messages);
+    document.cookie = `chatHistory=${encodeURIComponent(chatHistory)};path=/;max-age=604800`; // 7 days
+}
+
+// Load chat from cookie
+function loadChatFromCookie() {
+    const cookies = document.cookie.split(';');
+    const chatCookie = cookies.find(c => c.trim().startsWith('chatHistory='));
+    if (chatCookie) {
+        return JSON.parse(decodeURIComponent(chatCookie.split('=')[1]));
+    }
+    return [];
+}
+
+function addMessage(type, content) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}-message`;
         
