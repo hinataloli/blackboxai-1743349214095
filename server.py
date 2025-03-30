@@ -335,19 +335,22 @@ def ai_query():
                 
                 # Save chat history at the end of streaming
                 if save_history:
-                    chat_history = session.get('chat_history', [])
-                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    
-                    chat_entry = {
-                        "query": query,
-                        "response": full_response,
-                        "timestamp": timestamp,
-                        "id": f"chat_{len(chat_history)}"
-                    }
-                    
-                    chat_history.append(chat_entry)
-                    session['chat_history'] = chat_history
-                    session.modified = True
+                    # Create request context
+                    with app.app_context():
+                        with app.test_request_context():
+                            chat_history = session.get('chat_history', [])
+                            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            
+                            chat_entry = {
+                                "query": query,
+                                "response": full_response,
+                                "timestamp": timestamp,
+                                "id": f"chat_{len(chat_history)}"
+                            }
+                            
+                            chat_history.append(chat_entry)
+                            session['chat_history'] = chat_history
+                            session.modified = True
                 
                 # Send end marker
                 yield "data: [DONE]\n\n"
